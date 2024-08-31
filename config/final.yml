@@ -1,0 +1,6 @@
+---
+name: valkey-forge
+blobstore:
+  provider: s3
+  options:
+    bucket_name: valkey-forge-boshrelease

@@ -1,0 +1,5 @@
+check process standalone-9
+  with pidfile /var/vcap/sys/run/bpm/standalone-9/standalone-9.pid
+  start program "/var/vcap/jobs/bpm/bin/bpm start standalone-9"
+  stop program "/var/vcap/jobs/bpm/bin/bpm stop standalone-9"
+  group vcap

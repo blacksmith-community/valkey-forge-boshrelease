@@ -1,0 +1,19 @@
+processes:
+- name: standalone-8
+  executable: /var/vcap/packages/valkey-8/bin/valkey-server
+  args:
+  - /var/vcap/jobs/standalone-8/config/valkey.conf
+  env:
+    LANG: en_US.UTF-8
+  limits:
+    open_files: 65536
+  ephemeral_disk: true
+  persistent_disk: true
+  unsafe:
+    privileged: true
+    host_pid_namespace: true
+  capabilities:
+  - NET_BIND_SERVICE
+<% if p('persistent') %>
+  workdir: /var/vcap/store/standalone-8
+<% end %>

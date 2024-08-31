@@ -1,0 +1,13 @@
+#!/bin/bash
+set -eu
+
+cpus=$(grep -c ^processor /proc/cpuinfo) # # of CPUs for parallelized make
+version=$( ls stunnel-*.tar.gz | sed -e 's/.*stunnel-//' -e 's/.tar.gz//')
+
+tar zxvf "stunnel-${version}".tar.gz
+cd "stunnel-${version}"/
+./configure --prefix="${BOSH_INSTALL_TARGET}"
+make -j${cpus}
+make install
+
+exit 0

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -ev
+
+cpus=$(grep -c ^processor /proc/cpuinfo) # # of CPUs for parallelized make
+version=$( ls valkey-*.tar.gz | sed -e 's/.*valkey-//' -e 's/.tar.gz//')
+
+tar zxvf "valkey-${version}".tar.gz
+cd "valkey-${version}"/
+make BUILD_TLS=yes BUILD_TLS=module V=1
+make PREFIX="${BOSH_INSTALL_TARGET}" -j${cpus} install
+
+exit 0

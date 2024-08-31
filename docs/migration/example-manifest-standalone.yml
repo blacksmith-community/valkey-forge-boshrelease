@@ -1,0 +1,110 @@
+# Example manifest for migrating from Redis standalone to Valkey standalone
+# This shows configuration changes needed for migration
+
+---
+name: valkey-service-instance
+
+# Before (Redis):
+# releases:
+#   - name: redis-forge
+#     version: latest
+
+# After (Valkey):
+releases:
+  - name: valkey-forge
+    version: latest
+  - name: bpm
+    version: 1.4.20
+    url: https://bosh.io/d/github.com/cloudfoundry/bpm-release?v=1.4.20
+    sha1: sha256:1984129b352cd414e29a7dcffcf076049a776afa511cd44b587065f6e618cc6d
+
+stemcells:
+  - alias: default
+    os: ubuntu-jammy
+    version: latest
+
+update:
+  canaries: 1
+  max_in_flight: 1
+  canary_watch_time: 1000-30000
+  update_watch_time: 1000-30000
+
+instance_groups:
+  - name: standalone
+    instances: 1
+    azs: [z1]
+    networks:
+      - name: valkey-service  # Changed from redis-service
+    vm_type: default
+    persistent_disk_type: 10GB  # Adjust as needed
+    stemcell: default
+
+    jobs:
+      - name: bpm
+        release: bpm
+
+      # Before (Redis):
+      # - name: standalone-7
+      #   release: redis-forge
+
+      # After (Valkey):
+      - name: standalone-8  # Recommended: Use Valkey 8
+        release: valkey-forge
+        properties:
+          auth:
+            password: ((valkey_password))  # Use same password for seamless transition
+
+          persistent: true
+
+          # Property name changes: redis.* -> valkey.*
+          valkey:
+            maxmemory: 2gb
+            maxmemory-policy: allkeys-lru
+            notify-keyspace-events: ""
+            slowlog-log-slower-than: 10000
+            slowlog-max-len: 128
+            no-appendfsync-on-rewrite: false
+            auto-aof-rewrite-percentage: 100
+            auto-aof-rewrite-min-size: 64mb
+
+            # TLS configuration (if needed)
+            tls:
+              enabled: true
+              dual-mode: true  # Allows both TLS and non-TLS during migration
+              ca: ((valkey_ca.certificate))
+              ca_cert: ((valkey_ca.certificate))
+              ca_key: ((valkey_ca.private_key))
+
+          lua:
+            scripting-enabled: true
+
+          client:
+            timeout: 0
+            tcpkeepalive: 300
+            connections: 10000
+
+variables:
+  - name: valkey_password
+    type: password
+
+  - name: valkey_ca
+    type: certificate
+    options:
+      is_ca: true
+      common_name: valkey-ca
+
+  - name: valkey_cert
+    type: certificate
+    options:
+      ca: valkey_ca
+      common_name: valkey-server
+      alternative_names:
+        - "*.valkey-service.default.svc.cluster.local"
+
+# Migration Notes:
+# 1. Update network name from 'redis-service' to 'valkey-service' in cloud-config
+# 2. Change all 'redis.*' properties to 'valkey.*'
+# 3. Change job name from 'standalone-7' to 'standalone-8' (recommended)
+# 4. Update credentials variable names for clarity
+# 5. If using TLS, enable dual-mode initially to allow gradual client migration
+# 6. Test thoroughly before deploying to production

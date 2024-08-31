@@ -1,0 +1,107 @@
+name: valkey-blacksmith-plans
+
+packages: []
+
+templates:
+  bin/configure-blacksmith: bin/configure-blacksmith
+
+  config/tls/valkey.cert.erb: config/tls/valkey.cert
+  config/tls/valkey.ca.erb:  config/tls/valkey.ca
+  config/tls/valkey.key.erb: config/tls/valkey.key
+
+  plans/service.yml:                plans/service.yml
+
+  plans/standalone/manifest.yml:    plans/standalone/manifest.yml
+  plans/standalone/credentials.yml: plans/standalone/credentials.yml
+  plans/standalone/init:            plans/standalone/init
+
+  plans/cluster/manifest.yml:       plans/cluster/manifest.yml
+  plans/cluster/credentials.yml:    plans/cluster/credentials.yml
+  plans/cluster/init:               plans/cluster/init
+
+  plans/standalone-7/manifest.yml:    plans/standalone-7/manifest.yml
+  plans/standalone-7/credentials.yml: plans/standalone-7/credentials.yml
+  plans/standalone-7/init:            plans/standalone-7/init
+
+  plans/cluster-7/manifest.yml:       plans/cluster-7/manifest.yml
+  plans/cluster-7/credentials.yml:    plans/cluster-7/credentials.yml
+  plans/cluster-7/init:               plans/cluster-7/init
+
+  plans/standalone-8/manifest.yml:    plans/standalone-8/manifest.yml
+  plans/standalone-8/credentials.yml: plans/standalone-8/credentials.yml
+  plans/standalone-8/init:            plans/standalone-8/init
+
+  plans/cluster-8/manifest.yml:       plans/cluster-8/manifest.yml
+  plans/cluster-8/credentials.yml:    plans/cluster-8/credentials.yml
+  plans/cluster-8/init:               plans/cluster-8/init
+
+  plans/standalone-9/manifest.yml:    plans/standalone-9/manifest.yml
+  plans/standalone-9/credentials.yml: plans/standalone-9/credentials.yml
+  plans/standalone-9/init:            plans/standalone-9/init
+
+  plans/cluster-9/manifest.yml:       plans/cluster-9/manifest.yml
+  plans/cluster-9/credentials.yml:    plans/cluster-9/credentials.yml
+  plans/cluster-9/init:               plans/cluster-9/init
+
+properties:
+  environment:
+    description: "The environment name of the cloudfoundry/bosh deployment"
+
+  bosh_env:
+    description: "The environment name of the bosh deployment if different from cloudfoundry (defaults to environment)"
+
+  persistent_disk_type:
+    description: "BOSH Cloud Config Persistent Disk Type Name (optional)"
+    default: ""
+
+  service.id:
+    description: "Machine-friendly name for this service."
+    default: valkey
+
+  service.name:
+    description: "Human-friendly name for this service, to be displayed in the Cloud Foundry marketplace."
+    default: valkey
+
+  service.description:
+    description: "A description for this service, to be displayed in the Cloud Foundry marketplace."
+    default: "A dedicated Valkey instance."
+
+  service.tags:
+    description: "List of tags to apply to service instances."
+    default: [blacksmith, dedicated, valkey]
+
+  service.limit:
+    description: "A global limit on the number of Valkey services (regardless of the plan); 0 = unlimited."
+    default: 0
+
+  valkey.tls.enabled:
+    description: "Should the Valkey use TLS"
+    default: false
+  valkey.tls.dual-mode:
+    description: "Allow for TLS (16379) and Non-TLS (6379) both."
+    default: false
+  valkey.tls.ca:
+    description: "The PEM-encoded public certificate of the CA"
+  valkey.tls.ca_cert:
+    description: "The PEM-encoded certificate of the CA for signing"
+  valkey.tls.ca_key:
+    description: "The PEM-encoded private key for the CA certificate."
+
+  plans:
+    description: |
+      A map of plans.  i.e.:
+
+        standalone:
+          name: Standalone Valkey Instance
+          description: A single valkey server, with no redundancy or replication
+          limit: 7
+          type: standalone
+          vm_type: default
+
+      Configuration keys beyond `name', `description', `limit', and `type' are type-specific.
+          limit: 7
+
+      For type=standalone:
+
+        vm_type    What VM type to use for the standalone valkey server.
+                   Defaults to 'default'

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -euv
+
+safe gen "${CREDENTIALS}/valkey/system" password
+
+exit 0

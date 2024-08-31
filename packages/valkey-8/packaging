@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -eu
+
+# Detect # of CPUs so make jobs can be parallelized
+CPUS=$(grep -c ^processor /proc/cpuinfo)
+
+# $BOSH_COMPILE_TARGET - where this package & spec'd source files are available
+# $BOSH_INSTALL_TARGET - where you copy/install files to be included in package
+export HOME=/var/vcap
+
+tar -xzvf valkey-8.1.4.tar.gz
+cd valkey-8.1.4
+export PREFIX=${BOSH_INSTALL_TARGET}
+make BUILD_TLS=yes -j${CPUS} && make install

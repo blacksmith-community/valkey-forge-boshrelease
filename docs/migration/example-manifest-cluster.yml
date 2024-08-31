@@ -1,0 +1,148 @@
+# Example manifest for migrating from Redis cluster to Valkey cluster
+# This shows configuration changes needed for cluster migration
+
+---
+name: valkey-cluster-instance
+
+# Before (Redis):
+# releases:
+#   - name: redis-forge
+#     version: latest
+
+# After (Valkey):
+releases:
+  - name: valkey-forge
+    version: latest
+  - name: bpm
+    version: 1.4.20
+    url: https://bosh.io/d/github.com/cloudfoundry/bpm-release?v=1.4.20
+    sha1: sha256:1984129b352cd414e29a7dcffcf076049a776afa511cd44b587065f6e618cc6d
+  - name: prometheus
+    version: 30.2.0  # Optional: for metrics
+    url: https://bosh.io/d/github.com/cloudfoundry-community/prometheus-boshrelease?v=30.2.0
+    sha1: 0ba6f3eae9071fb554082398997d57a742c3fe3c
+
+stemcells:
+  - alias: default
+    os: ubuntu-jammy
+    version: latest
+
+update:
+  canaries: 1
+  max_in_flight: 1
+  serial: true  # Important for cluster deployments
+  canary_watch_time: 30000-240000
+  update_watch_time: 30000-240000
+
+instance_groups:
+  - name: node
+    instances: 6  # 2 masters × 3 (1 master + 2 replicas)
+    azs: [z1, z2, z3]  # Spread across AZs for HA
+    networks:
+      - name: valkey-service  # Changed from redis-service
+    vm_type: default
+    persistent_disk_type: 50GB  # Adjust based on data size
+    stemcell: default
+
+    jobs:
+      - name: bpm
+        release: bpm
+
+      # Before (Redis):
+      # - name: cluster-7
+      #   release: redis-forge
+
+      # After (Valkey):
+      - name: cluster-8  # Recommended: Use Valkey 8
+        release: valkey-forge
+        properties:
+          auth:
+            password: ((valkey_password))
+
+          cluster:
+            masters: 2
+            replicas: 2
+            timeout: 15
+            boot_wait: 20
+
+          # Property name changes: redis.* -> valkey.*
+          valkey:
+            maxmemory: 4gb
+            maxmemory-policy: allkeys-lru
+            notify-keyspace-events: ""
+            slowlog-log-slower-than: 10000
+            slowlog-max-len: 128
+            no-appendfsync-on-rewrite: false
+            auto-aof-rewrite-percentage: 100
+            auto-aof-rewrite-min-size: 64mb
+
+            # TLS configuration (important for cluster)
+            tls:
+              enabled: true
+              dual-mode: true  # Allows both during migration
+              ca: ((valkey_ca.certificate))
+              ca_cert: ((valkey_cert.certificate))
+              ca_key: ((valkey_cert.private_key))
+
+            # Disabled commands for security
+            disabled-commands:
+              - CONFIG
+              - SAVE
+              - BGSAVE
+              - DEBUG
+              - SHUTDOWN
+              - SLAVEOF
+              - ACL
+
+          lua:
+            scripting-enabled: true
+
+          client:
+            timeout: 0
+            tcpkeepalive: 300
+            connections: 10000
+
+      # Optional: Add Prometheus exporter
+      - name: valkey_exporter
+        release: prometheus
+        properties:
+          valkey_exporter:
+            valkey:
+              password: ((valkey_password))
+
+variables:
+  - name: valkey_password
+    type: password
+
+  - name: valkey_ca
+    type: certificate
+    options:
+      is_ca: true
+      common_name: valkey-cluster-ca
+
+  - name: valkey_cert
+    type: certificate
+    options:
+      ca: valkey_ca
+      common_name: valkey-cluster
+      alternative_names:
+        - "*.node.valkey-service.default.svc.cluster.local"
+        - "*.valkey-service.default.svc.cluster.local"
+
+# Migration Notes:
+# 1. IMPORTANT: Cluster migration requires careful planning
+# 2. Test slot distribution: Should match Redis cluster (16384 slots)
+# 3. Update network name from 'redis-service' to 'valkey-service'
+# 4. Change all 'redis.*' properties to 'valkey.*'
+# 5. Change job name from 'cluster-7' to 'cluster-8'
+# 6. Ensure same number of masters/replicas as original Redis cluster
+# 7. Enable dual-mode TLS initially for gradual transition
+# 8. Post-deploy script will automatically form cluster
+# 9. Verify cluster formation: valkey-cli CLUSTER INFO
+# 10. Consider adding Prometheus exporter for monitoring
+#
+# Migration Strategy:
+# - Use blue-green or create new cluster and migrate data
+# - DO NOT attempt in-place upgrade for clusters
+# - Use migration scripts in docs/migration/ directory
+# - Test thoroughly in staging environment first

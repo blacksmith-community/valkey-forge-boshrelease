@@ -1,0 +1,61 @@
+---
+meta:
+  size: default
+  disk_config: {}
+  password: (( vault $CREDENTIALS "/valkey/system:password" ))
+  masters: 2
+  replicas: 2
+  instances: 4
+  default:
+    azs: [z1, z2]
+
+releases:
+  - { name: valkey-forge, version: latest }
+
+stemcells:
+  - alias: default
+    os: ubuntu-jammy
+    version: latest
+
+update:
+  canaries: 1
+  max_in_flight: 10
+  canary_watch_time: 1000-30000
+  update_watch_time: 1000-30000
+
+instance_groups:
+  - name: valkey
+    instances: (( grab meta.instances ))
+    azs: (( grab meta.azs || meta.default.azs ))
+    networks: [name: (( grab meta.net || "valkey-service" ))]
+    stemcell: default
+    vm_type: (( grab meta.size ))
+
+    # This is a workaround to make sure only one of `persistent_disk`
+    # and `persistent_disk_type` is defined.
+    .: (( inject meta.disk_config ))
+
+    jobs:
+      - name: valkey
+        release: valkey-forge
+        properties:
+          auth:
+            password: (( grab meta.password ))
+          cluster:
+            masters: (( grab meta.masters ))
+            replicas: (( grab meta.replicas ))
+          valkey:
+            maxmemory-policy: (( grab meta.params.maxmemory-policy || meta.valkey_maxmemory-policy || "allkeys-lru" ))
+            notify-keyspace-events: (( grab meta.params.notify-keyspace-events || meta.valkey_notify-keyspace-events || "" ))
+            slowlog-log-slower-than: (( grab meta.params.slowlog-log-slower-than || meta.valkey_slowlog-log-slower-than || 10000 ))
+            slowlog-max-len: (( grab meta.params.slowlog-max-len || meta.valkey_slowlog-max-len || 128 ))
+            maxmemory: (( grab meta.valkey_maxmemory || 0 ))
+            no-appendfsync-on-rewrite: (( grab meta.valkey_no-appendfsync-on-rewrite || false ))
+            auto-aof-rewrite-percentage: (( grab meta.valkey_auto-aof-rewrite-percentage || 100 ))
+            auto-aof-rewrite-min-size: (( grab meta.valkey_auto-aof-rewrite-min-size || "64mb" ))
+          lua:
+            scripting-enabled: (( grab meta.lua_scripting_enabled || true ))
+          client:
+            timeout: (( grab meta.client_timeout || 0 ))
+            tcpkeepalive: (( grab meta.client_tcpkeepalive || 300 ))
+            connections: (( grab meta.client_connections || 10000 ))
