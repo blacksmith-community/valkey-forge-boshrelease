@@ -9,7 +9,8 @@
 #     --redis-cluster host1:6379,host2:6379 \
 #     --valkey-cluster host1:6379,host2:6379 \
 #     --password secret \
-#     [--batch-size 100]
+#     [--batch-size 100] \
+#     [--dry-run]
 #
 use strict;
 use warnings;
@@ -17,8 +18,12 @@ use IO::Socket::INET;
 use Getopt::Long;
 use Time::HiRes qw(time);
 
+our $VERSION = '1.1.0';
+
 my %opts = (
     'batch-size' => 100,
+    'dry-run' => 0,
+    'verbose' => 0,
 );
 
 GetOptions(\%opts,
@@ -28,40 +33,141 @@ GetOptions(\%opts,
     'redis-password=s',
     'valkey-password=s',
     'batch-size=i',
-    'help'
+    'dry-run|n',
+    'verbose|v',
+    'help|h'
 ) or die "Error in command line arguments\n";
 
-if ($opts{help} || !$opts{'redis-cluster'} || !$opts{'valkey-cluster'}) {
+if ($opts{help} || !$opts{'redis-cluster'}) {
     print_usage();
     exit $opts{help} ? 0 : 1;
 }
 
+# In dry-run mode, valkey-cluster is optional
+if (!$opts{'dry-run'} && !$opts{'valkey-cluster'}) {
+    print "Error: --valkey-cluster is required (unless using --dry-run)\n\n";
+    print_usage();
+    exit 1;
+}
+
 # Parse cluster nodes
 my @redis_nodes = split(/,/, $opts{'redis-cluster'});
-my @valkey_nodes = split(/,/, $opts{'valkey-cluster'});
+my @valkey_nodes = $opts{'valkey-cluster'} ? split(/,/, $opts{'valkey-cluster'}) : ();
 
 # Use specific passwords or fallback to common password
 my $redis_pass = $opts{'redis-password'} || $opts{'password'};
 my $valkey_pass = $opts{'valkey-password'} || $opts{'password'};
 
-print "Redis Cluster Migration Tool\n";
-print "============================\n\n";
+# Print header
+print "=" x 60 . "\n";
+if ($opts{'dry-run'}) {
+    print "[DRY-RUN] Redis Cluster Migration Preview\n";
+} else {
+    print "Redis Cluster Migration Tool v$VERSION\n";
+}
+print "=" x 60 . "\n\n";
 
-# Connect to first node of each cluster
+# Connect to first node of Redis cluster
 print "Connecting to Redis cluster ($redis_nodes[0])...\n";
 my $redis = connect_node($redis_nodes[0], $redis_pass);
 
-print "Connecting to Valkey cluster ($valkey_nodes[0])...\n";
-my $valkey = connect_node($valkey_nodes[0], $valkey_pass);
-
-# Get cluster topology
+# Get Redis cluster topology
 print "\nAnalyzing Redis cluster topology...\n";
 my $redis_slots = get_cluster_slots($redis);
-print_cluster_info($redis_slots);
+print_cluster_info($redis_slots, "Redis");
+
+# Count total keys in Redis cluster
+my $total_keys = 0;
+my $total_data_size = 0;
+print "\nCounting keys per shard...\n";
+foreach my $slot_range (@$redis_slots) {
+    my ($start_slot, $end_slot, $master_host, $master_port) = @$slot_range;
+    my $redis_master = connect_node("$master_host:$master_port", $redis_pass);
+
+    send_command($redis_master, "DBSIZE");
+    my $dbsize = read_response($redis_master);
+    $total_keys += $dbsize if $dbsize;
+
+    # Estimate memory usage
+    send_command($redis_master, "INFO", "memory");
+    my $mem_info = read_response($redis_master);
+    if ($mem_info && $mem_info =~ /used_memory:(\d+)/) {
+        $total_data_size += $1;
+    }
+
+    printf "  Shard %s:%d - %d keys\n", $master_host, $master_port, $dbsize || 0;
+    close($redis_master);
+}
+
+printf "\nTotal keys across cluster: %d\n", $total_keys;
+printf "Total data size: %.2f MB\n", $total_data_size / (1024*1024) if $total_data_size;
+
+# In dry-run mode, show analysis and exit
+if ($opts{'dry-run'}) {
+    print "\n" . "=" x 60 . "\n";
+    print "[DRY-RUN] Migration Plan Summary\n";
+    print "=" x 60 . "\n\n";
+
+    print "Source (Redis Cluster):\n";
+    printf "  Nodes: %s\n", join(", ", @redis_nodes);
+    printf "  Shards: %d\n", scalar(@$redis_slots);
+    printf "  Total keys: %d\n", $total_keys;
+    printf "  Total data: %.2f MB\n", $total_data_size / (1024*1024) if $total_data_size;
+
+    if (@valkey_nodes) {
+        print "\nTarget (Valkey Cluster):\n";
+        printf "  Nodes: %s\n", join(", ", @valkey_nodes);
+
+        # Try to connect and analyze Valkey cluster
+        eval {
+            print "\nConnecting to Valkey cluster ($valkey_nodes[0])...\n";
+            my $valkey = connect_node($valkey_nodes[0], $valkey_pass);
+            my $valkey_slots = get_cluster_slots($valkey);
+            print_cluster_info($valkey_slots, "Valkey");
+
+            if (verify_slot_compatibility($redis_slots, $valkey_slots)) {
+                print "\n[OK] Cluster topologies are compatible.\n";
+            } else {
+                print "\n[WARNING] Cluster topologies may not be compatible.\n";
+                print "Redis and Valkey clusters should have the same number of shards.\n";
+            }
+            close($valkey);
+        };
+        if ($@) {
+            print "\n[INFO] Could not connect to Valkey cluster for validation.\n";
+        }
+    } else {
+        print "\nTarget (Valkey Cluster):\n";
+        print "  Not specified (use --valkey-cluster to specify)\n";
+    }
+
+    print "\nMigration Settings:\n";
+    printf "  Batch size: %d\n", $opts{'batch-size'};
+
+    # Estimate time
+    if ($total_keys > 0) {
+        my $est_rate = 500;  # Conservative estimate for cluster migration
+        my $est_time = $total_keys / $est_rate;
+        printf "\nEstimated migration time: %.0f seconds (%.1f minutes)\n",
+            $est_time, $est_time / 60;
+    }
+
+    print "\n" . "=" x 60 . "\n";
+    print "[DRY-RUN] No data was migrated.\n";
+    print "Remove --dry-run to perform the actual migration.\n";
+    print "=" x 60 . "\n";
+
+    close($redis);
+    exit 0;
+}
+
+# Actual migration mode - connect to Valkey cluster
+print "\nConnecting to Valkey cluster ($valkey_nodes[0])...\n";
+my $valkey = connect_node($valkey_nodes[0], $valkey_pass);
 
 print "\nAnalyzing Valkey cluster topology...\n";
 my $valkey_slots = get_cluster_slots($valkey);
-print_cluster_info($valkey_slots);
+print_cluster_info($valkey_slots, "Valkey");
 
 # Verify slot distribution matches
 if (!verify_slot_compatibility($redis_slots, $valkey_slots)) {
@@ -70,9 +176,12 @@ if (!verify_slot_compatibility($redis_slots, $valkey_slots)) {
 }
 
 # Migrate data slot by slot
-print "\nStarting data migration...\n";
-my $total_keys = 0;
+print "\n" . "=" x 60 . "\n";
+print "Starting data migration...\n";
+print "=" x 60 . "\n";
+
 my $migrated_keys = 0;
+my $failed_keys = 0;
 my $start_time = time();
 
 foreach my $slot_range (@$redis_slots) {
@@ -87,16 +196,20 @@ foreach my $slot_range (@$redis_slots) {
     my $valkey_master_info = find_master_for_slots($valkey_slots, $start_slot, $end_slot);
     my $valkey_master = connect_node("$valkey_master_info->[2]:$valkey_master_info->[3]", $valkey_pass);
 
+    printf "  -> Valkey master: %s:%d\n", $valkey_master_info->[2], $valkey_master_info->[3];
+
     # Migrate keys for this slot range
+    my $shard_keys = 0;
     for (my $slot = $start_slot; $slot <= $end_slot; $slot++) {
         my $keys = get_keys_in_slot($redis_master, $slot);
-        $total_keys += scalar @$keys;
+        $shard_keys += scalar @$keys;
 
         foreach my $key (@$keys) {
             if (migrate_key_with_socket($redis_master, $valkey_master, $key)) {
                 $migrated_keys++;
             } else {
-                warn "Failed to migrate key: $key (slot $slot)\n";
+                $failed_keys++;
+                warn "Failed to migrate key: $key (slot $slot)\n" if $opts{verbose};
             }
 
             if ($migrated_keys % 1000 == 0) {
@@ -107,15 +220,18 @@ foreach my $slot_range (@$redis_slots) {
         }
     }
 
+    printf "  Shard complete: %d keys processed\n", $shard_keys;
     close($redis_master);
     close($valkey_master);
 }
 
 my $elapsed = time() - $start_time;
-print "\n" . ("=" x 50) . "\n";
+print "\n" . "=" x 60 . "\n";
 print "Migration complete!\n";
-print "Total keys found: $total_keys\n";
-print "Keys migrated: $migrated_keys\n";
+print "=" x 60 . "\n";
+printf "Total keys found: %d\n", $total_keys;
+printf "Keys migrated: %d\n", $migrated_keys;
+printf "Keys failed: %d\n", $failed_keys;
 printf "Time elapsed: %.2f seconds\n", $elapsed;
 printf "Average rate: %.0f keys/second\n", $migrated_keys / $elapsed if $elapsed > 0;
 
@@ -269,40 +385,84 @@ sub find_master_for_slots {
 }
 
 sub print_cluster_info {
-    my ($slots) = @_;
+    my ($slots, $label) = @_;
+    $label ||= "Cluster";
 
+    printf "%s Cluster Topology:\n", $label;
     printf "  Shards: %d\n", scalar(@$slots);
     printf "  Total slots: %d (0-16383)\n", 16384;
 
     foreach my $slot_range (@$slots) {
         my ($start, $end, $host, $port) = @$slot_range;
         my $slot_count = $end - $start + 1;
-        printf "    Slots %d-%d (%d slots) => %s:%d\n",
+        printf "    Slots %5d-%5d (%5d slots) => %s:%d\n",
             $start, $end, $slot_count, $host, $port;
     }
 }
 
 sub print_usage {
-    print <<'USAGE';
-Usage: redis-cluster-to-valkey.pl [OPTIONS]
+    print <<"USAGE";
+redis-cluster-to-valkey.pl v$VERSION
 
-Required Options:
+Migrate Redis Cluster to Valkey Cluster using DUMP/RESTORE commands.
+Designed to run locally on BOSH VMs (upload via bosh scp).
+
+USAGE:
+    $0 [OPTIONS]
+
+REQUIRED OPTIONS:
   --redis-cluster NODES      Comma-separated list of Redis nodes
                              Format: host1:port1,host2:port2
+
+OPTIONAL (required unless --dry-run):
   --valkey-cluster NODES     Comma-separated list of Valkey nodes
                              Format: host1:port1,host2:port2
 
-Optional:
+AUTHENTICATION:
   --password PASS            Password for both clusters
   --redis-password PASS      Redis-specific password
   --valkey-password PASS     Valkey-specific password
-  --batch-size SIZE          Keys per batch (default: 100)
-  --help                     Show this help message
 
-Example:
+OPTIONS:
+  --batch-size SIZE          Keys per batch (default: 100)
+  -n, --dry-run              Preview migration without modifying data
+  -v, --verbose              Enable verbose output
+  -h, --help                 Show this help message
+
+EXAMPLES:
+  # Preview migration (dry-run)
+  ./redis-cluster-to-valkey.pl \\
+    --redis-cluster redis1:6379,redis2:6379,redis3:6379 \\
+    --password mysecret \\
+    --dry-run
+
+  # Full migration
   ./redis-cluster-to-valkey.pl \\
     --redis-cluster redis1:6379,redis2:6379,redis3:6379 \\
     --valkey-cluster valkey1:6379,valkey2:6379,valkey3:6379 \\
     --password mysecret
+
+  # Different passwords for each cluster
+  ./redis-cluster-to-valkey.pl \\
+    --redis-cluster redis1:6379,redis2:6379 \\
+    --redis-password redis_secret \\
+    --valkey-cluster valkey1:6379,valkey2:6379 \\
+    --valkey-password valkey_secret
+
+BOSH DEPLOYMENT:
+  # Upload script to a Redis cluster node
+  bosh -d redis-cluster scp redis-cluster-to-valkey.pl cluster/0:/tmp/
+
+  # SSH and run migration preview
+  bosh -d redis-cluster ssh cluster/0
+  sudo /tmp/redis-cluster-to-valkey.pl \\
+    --redis-cluster localhost:6379 \\
+    --password \$REDIS_PASS \\
+    --dry-run
+
+NOTES:
+  - Both clusters must have the same number of shards
+  - Slot distribution should match between clusters
+  - The script uses CLUSTER SLOTS to discover topology
 USAGE
 }

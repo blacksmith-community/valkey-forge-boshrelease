@@ -13,13 +13,16 @@
 #     --valkey-port 6379 \
 #     --valkey-password secret \
 #     [--batch-size 1000] \
-#     [--pattern "*"]
+#     [--pattern "*"] \
+#     [--dry-run]
 #
 use strict;
 use warnings;
 use IO::Socket::INET;
 use Getopt::Long;
 use Time::HiRes qw(time);
+
+our $VERSION = '1.1.0';
 
 my %opts = (
     'redis-host' => '127.0.0.1',
@@ -28,6 +31,8 @@ my %opts = (
     'valkey-port' => 6379,
     'batch-size' => 1000,
     'pattern' => '*',
+    'dry-run' => 0,
+    'verbose' => 0,
 );
 
 GetOptions(\%opts,
@@ -39,7 +44,9 @@ GetOptions(\%opts,
     'valkey-password=s',
     'batch-size=i',
     'pattern=s',
-    'help'
+    'dry-run|n',
+    'verbose|v',
+    'help|h'
 ) or die "Error in command line arguments\n";
 
 if ($opts{help}) {
@@ -47,18 +54,104 @@ if ($opts{help}) {
     exit 0;
 }
 
-# Connect to Redis and Valkey
+# Show mode
+if ($opts{'dry-run'}) {
+    print "=" x 60 . "\n";
+    print "[DRY-RUN] Migration Preview Mode\n";
+    print "=" x 60 . "\n\n";
+}
+
+# Connect to Redis
 print "Connecting to Redis at $opts{'redis-host'}:$opts{'redis-port'}...\n";
 my $redis = connect_server($opts{'redis-host'}, $opts{'redis-port'}, $opts{'redis-password'});
 
-print "Connecting to Valkey at $opts{'valkey-host'}:$opts{'valkey-port'}...\n";
-my $valkey = connect_server($opts{'valkey-host'}, $opts{'valkey-port'}, $opts{'valkey-password'});
+# Get Redis info
+send_command($redis, "INFO", "keyspace");
+my $redis_info = read_response($redis);
+print "Redis info:\n$redis_info\n\n" if $opts{verbose} && $redis_info;
+
+# In dry-run mode, connect to Valkey only if needed for validation
+my $valkey;
+if (!$opts{'dry-run'}) {
+    print "Connecting to Valkey at $opts{'valkey-host'}:$opts{'valkey-port'}...\n";
+    $valkey = connect_server($opts{'valkey-host'}, $opts{'valkey-port'}, $opts{'valkey-password'});
+} else {
+    print "Target: Valkey at $opts{'valkey-host'}:$opts{'valkey-port'}\n";
+    print "(Skipping connection in dry-run mode)\n\n";
+}
 
 # Get list of keys
 print "Scanning for keys matching pattern '$opts{pattern}'...\n";
 my @keys = scan_keys($redis, $opts{pattern});
 my $total_keys = scalar @keys;
 print "Found $total_keys keys to migrate\n";
+
+# Calculate data size estimate
+my $total_size = 0;
+if ($opts{'dry-run'} || $opts{verbose}) {
+    print "Analyzing data sizes...\n";
+    my $sample_count = $total_keys < 100 ? $total_keys : 100;
+    my $sample_size = 0;
+
+    for (my $i = 0; $i < $sample_count && $i < $total_keys; $i++) {
+        send_command($redis, "DEBUG", "OBJECT", $keys[$i]);
+        my $debug_info = read_response($redis);
+        if ($debug_info && $debug_info =~ /serializedlength:(\d+)/) {
+            $sample_size += $1;
+        }
+    }
+
+    if ($sample_count > 0) {
+        my $avg_size = $sample_size / $sample_count;
+        $total_size = $avg_size * $total_keys;
+        printf "Estimated total data size: %.2f MB\n", $total_size / (1024*1024);
+    }
+}
+
+# Dry-run mode: show summary and exit
+if ($opts{'dry-run'}) {
+    print "\n" . "=" x 60 . "\n";
+    print "[DRY-RUN] Migration Plan Summary\n";
+    print "=" x 60 . "\n\n";
+
+    print "Source:\n";
+    printf "  Host: %s:%d\n", $opts{'redis-host'}, $opts{'redis-port'};
+    printf "  Keys matching '%s': %d\n", $opts{pattern}, $total_keys;
+    printf "  Estimated size: %.2f MB\n", $total_size / (1024*1024) if $total_size;
+
+    print "\nTarget:\n";
+    printf "  Host: %s:%d\n", $opts{'valkey-host'}, $opts{'valkey-port'};
+
+    print "\nMigration Settings:\n";
+    printf "  Batch size: %d\n", $opts{'batch-size'};
+    printf "  Estimated batches: %d\n", int(($total_keys + $opts{'batch-size'} - 1) / $opts{'batch-size'});
+
+    if ($total_keys > 0 && $total_size > 0) {
+        # Estimate migration time (roughly 1000 keys/sec for small keys)
+        my $est_rate = 1000;
+        my $est_time = $total_keys / $est_rate;
+        printf "\nEstimated migration time: %.0f seconds (%.1f minutes)\n",
+            $est_time, $est_time / 60;
+    }
+
+    # Show sample keys
+    if ($total_keys > 0 && $opts{verbose}) {
+        my $sample_size = $total_keys < 10 ? $total_keys : 10;
+        print "\nSample keys to migrate:\n";
+        for (my $i = 0; $i < $sample_size; $i++) {
+            print "  - $keys[$i]\n";
+        }
+        print "  ... and " . ($total_keys - $sample_size) . " more\n" if $total_keys > $sample_size;
+    }
+
+    print "\n" . "=" x 60 . "\n";
+    print "[DRY-RUN] No data was migrated.\n";
+    print "Remove --dry-run to perform the actual migration.\n";
+    print "=" x 60 . "\n";
+
+    close($redis);
+    exit 0;
+}
 
 # Migrate keys in batches
 my $migrated = 0;
@@ -89,7 +182,9 @@ for (my $i = 0; $i < $total_keys; $i += $opts{'batch-size'}) {
 }
 
 my $elapsed = time() - $start_time;
-print "\nMigration complete!\n";
+print "\n" . "=" x 60 . "\n";
+print "Migration complete!\n";
+print "=" x 60 . "\n";
 print "Total keys: $total_keys\n";
 print "Migrated: $migrated\n";
 print "Failed: $failed\n";
@@ -97,7 +192,7 @@ printf "Time elapsed: %.2f seconds\n", $elapsed;
 printf "Average rate: %.0f keys/second\n", $migrated / $elapsed if $elapsed > 0;
 
 close($redis);
-close($valkey);
+close($valkey) if $valkey;
 
 sub connect_server {
     my ($host, $port, $password) = @_;
@@ -222,10 +317,16 @@ sub migrate_key {
 }
 
 sub print_usage {
-    print <<'USAGE';
-Usage: redis-to-valkey-dump-restore.pl [OPTIONS]
+    print <<"USAGE";
+redis-to-valkey-dump-restore.pl v$VERSION
 
-Options:
+Migrate Redis data to Valkey using DUMP/RESTORE commands.
+Designed to run locally on BOSH VMs (upload via bosh scp).
+
+USAGE:
+    $0 [OPTIONS]
+
+OPTIONS:
   --redis-host HOST          Redis hostname (default: 127.0.0.1)
   --redis-port PORT          Redis port (default: 6379)
   --redis-password PASS      Redis password
@@ -234,14 +335,43 @@ Options:
   --valkey-password PASS     Valkey password
   --batch-size SIZE          Keys per batch (default: 1000)
   --pattern PATTERN          Key pattern to match (default: *)
-  --help                     Show this help message
+  -n, --dry-run              Preview migration without modifying data
+  -v, --verbose              Enable verbose output
+  -h, --help                 Show this help message
 
-Example:
+EXAMPLES:
+  # Preview migration (dry-run)
   ./redis-to-valkey-dump-restore.pl \\
-    --redis-host redis.internal \\
+    --redis-host localhost \\
+    --redis-password secret1 \\
+    --valkey-host valkey.internal \\
+    --valkey-password secret2 \\
+    --dry-run
+
+  # Migrate all keys
+  ./redis-to-valkey-dump-restore.pl \\
+    --redis-host localhost \\
+    --redis-password secret1 \\
+    --valkey-host valkey.internal \\
+    --valkey-password secret2
+
+  # Migrate only user:* keys
+  ./redis-to-valkey-dump-restore.pl \\
+    --redis-host localhost \\
     --redis-password secret1 \\
     --valkey-host valkey.internal \\
     --valkey-password secret2 \\
     --pattern "user:*"
+
+BOSH DEPLOYMENT:
+  # Upload script to Redis VM
+  bosh -d redis-instance scp redis-to-valkey-dump-restore.pl standalone/0:/tmp/
+
+  # SSH and run migration
+  bosh -d redis-instance ssh standalone/0
+  sudo /tmp/redis-to-valkey-dump-restore.pl \\
+    --redis-host localhost --redis-password \$REDIS_PASS \\
+    --valkey-host valkey.internal --valkey-password \$VALKEY_PASS \\
+    --dry-run
 USAGE
 }

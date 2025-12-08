@@ -521,13 +521,86 @@ valkey-cli INFO server
 
 ## Helper Scripts
 
-Provided migration scripts in `docs/migration/`:
+Migration scripts are provided in `docs/migration/`. All scripts support `--dry-run` mode for safe validation before actual migration.
 
-1. **redis-to-valkey-dump-restore.pl** - Dump and restore individual keys
-2. **redis-config-to-valkey.pl** - Translate Redis config to Valkey
-3. **redis-cluster-to-valkey.pl** - Migrate clustered deployments
+### Prerequisites
 
-Usage examples provided in each script header.
+Scripts are pure Perl using only core modules (no CPAN dependencies). They are designed to run on BOSH VMs by uploading via `bosh scp`.
+
+### 1. redis-config-to-valkey.pl
+
+Translates Redis configuration files to Valkey format.
+
+```bash
+# Preview translation
+./redis-config-to-valkey.pl --input redis.conf --dry-run
+
+# Actual translation
+./redis-config-to-valkey.pl --input redis.conf --output valkey.conf
+
+# Show verbose translation details
+./redis-config-to-valkey.pl --input redis.conf --output valkey.conf --verbose
+```
+
+### 2. redis-to-valkey-dump-restore.pl
+
+Migrates data from standalone Redis to Valkey using DUMP/RESTORE commands.
+
+```bash
+# Upload to Redis VM
+bosh -d redis-instance scp redis-to-valkey-dump-restore.pl standalone/0:/tmp/
+
+# SSH and preview migration
+bosh -d redis-instance ssh standalone/0
+sudo /tmp/redis-to-valkey-dump-restore.pl \
+  --redis-host localhost --redis-password $REDIS_PASS \
+  --valkey-host valkey.internal --valkey-password $VALKEY_PASS \
+  --dry-run
+
+# Run actual migration
+sudo /tmp/redis-to-valkey-dump-restore.pl \
+  --redis-host localhost --redis-password $REDIS_PASS \
+  --valkey-host valkey.internal --valkey-password $VALKEY_PASS
+
+# Migrate only specific keys
+sudo /tmp/redis-to-valkey-dump-restore.pl \
+  --redis-host localhost --redis-password $REDIS_PASS \
+  --valkey-host valkey.internal --valkey-password $VALKEY_PASS \
+  --pattern "user:*"
+```
+
+### 3. redis-cluster-to-valkey.pl
+
+Migrates clustered Redis deployments to Valkey clusters with slot-aware data transfer.
+
+```bash
+# Upload to a Redis cluster node
+bosh -d redis-cluster scp redis-cluster-to-valkey.pl cluster/0:/tmp/
+
+# SSH and preview migration
+bosh -d redis-cluster ssh cluster/0
+sudo /tmp/redis-cluster-to-valkey.pl \
+  --redis-cluster localhost:6379 \
+  --password $REDIS_PASS \
+  --dry-run
+
+# Run full migration
+sudo /tmp/redis-cluster-to-valkey.pl \
+  --redis-cluster redis1:6379,redis2:6379,redis3:6379 \
+  --valkey-cluster valkey1:6379,valkey2:6379,valkey3:6379 \
+  --password $PASS
+```
+
+### Script Features
+
+| Feature | dump-restore | cluster | config |
+|---------|-------------|---------|--------|
+| `--dry-run` | Yes | Yes | Yes |
+| `--verbose` | Yes | Yes | Yes |
+| Key pattern filter | Yes | No | N/A |
+| TLS support | Planned | Planned | N/A |
+| Progress reporting | Yes | Yes | Yes |
+| Size estimation | Yes | Yes | N/A |
 
 ## Additional Resources
 
