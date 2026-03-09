@@ -1,0 +1,81 @@
+name: valkey-forge
+version: 1.0.1
+commit_hash: e06e0df
+uncommitted_changes: false
+jobs:
+- name: cluster-7
+  version: 77404fe24d72008e6409a3def4525cb35418b7c0ddf74c02574d68e63e4ab457
+  fingerprint: 77404fe24d72008e6409a3def4525cb35418b7c0ddf74c02574d68e63e4ab457
+  sha1: sha256:e8dffa676041b9a60a65a7f2a69ffd7d6f1494a86fc1a1f15b4ba99c81f648ac
+  packages:
+  - valkey-7
+  - stunnel
+- name: cluster-8
+  version: 12b70f667cfc396cb99af009cfa55b19796b1e20e53969e80e4346e9bf77c05b
+  fingerprint: 12b70f667cfc396cb99af009cfa55b19796b1e20e53969e80e4346e9bf77c05b
+  sha1: sha256:69e14b1bb0a16bff7f4187214d17297eb1c353d841c12128a0fb884d221891ae
+  packages:
+  - valkey-8
+  - stunnel
+- name: cluster-9
+  version: 478855fae44fd7e2110aabd8f951a9b5c86e0ab8cee3c79880883bc11ad52e9f
+  fingerprint: 478855fae44fd7e2110aabd8f951a9b5c86e0ab8cee3c79880883bc11ad52e9f
+  sha1: sha256:f315959a5dc2a1cb782af924fdd681ded2bbaa8ce4887c067475c832f34f67ae
+  packages:
+  - valkey-9
+  - stunnel
+- name: standalone-7
+  version: 6cedfc09d8f5860f9bc0fd094b000d15748a178735fc122826e83f10cba02335
+  fingerprint: 6cedfc09d8f5860f9bc0fd094b000d15748a178735fc122826e83f10cba02335
+  sha1: sha256:1ff8674fffbcf9c33f58084c9e712694c43ca663bce4d4070bb090e98fbda050
+  packages:
+  - valkey-7
+- name: standalone-8
+  version: 0a13cad760e6490057de49efe71d54ce22baf5ed36d0248e00b2206feed736da
+  fingerprint: 0a13cad760e6490057de49efe71d54ce22baf5ed36d0248e00b2206feed736da
+  sha1: sha256:c99396c1d6bf545e4919368abc423470c751e0e442f60c62a3192171669057ac
+  packages:
+  - valkey-8
+- name: standalone-9
+  version: 270a67f905a2e81acc2d9d6435fc2de6e49ff0f30a4dc3fdbb5eabf1c0a676fa
+  fingerprint: 270a67f905a2e81acc2d9d6435fc2de6e49ff0f30a4dc3fdbb5eabf1c0a676fa
+  sha1: sha256:020169449fd7d84e7de320e3a89b0601ea09fcc63c286f5009be96a0f34c0eb4
+  packages:
+  - valkey-9
+- name: stunnel
+  version: de8e6ee51cc1e8592fee2e5dc54e7abbc370dac0636aee19d7c046476dbb7b99
+  fingerprint: de8e6ee51cc1e8592fee2e5dc54e7abbc370dac0636aee19d7c046476dbb7b99
+  sha1: sha256:89bb93f33f5634acd9d0b0790ccca81f9ee2bc604bbd09fa02c8ea98a6695db4
+  packages: []
+- name: valkey-blacksmith-plans
+  version: 5821695cbcf36c5f00926a353fdec5ea40c41dc01291f5c5fc7ae19e7fee4dbf
+  fingerprint: 5821695cbcf36c5f00926a353fdec5ea40c41dc01291f5c5fc7ae19e7fee4dbf
+  sha1: sha256:22e926d76280e2f857673a7ed01d173efa9299aad84a0851c3bdac1c2aa273e5
+  packages: []
+packages:
+- name: stunnel
+  version: d697fddb008ed3d1d37788c77757d3f7c2342e02c38656c76db0c81b23890e1a
+  fingerprint: d697fddb008ed3d1d37788c77757d3f7c2342e02c38656c76db0c81b23890e1a
+  sha1: sha256:46727474a958c011662ac91a4bcc8ef587ee5cfaa649faf8923fe24d09f58079
+  dependencies: []
+- name: valkey
+  version: 066f9b95e659877cbe29fcab5a18ff111c3e92830d373f0ca84c9bba42e52c6e
+  fingerprint: 066f9b95e659877cbe29fcab5a18ff111c3e92830d373f0ca84c9bba42e52c6e
+  sha1: sha256:8f0d0e3b8c3a96f2ebf90ba135f25f79f91a5686f9c030495baa5dbc40f1274d
+  dependencies: []
+- name: valkey-7
+  version: 41128515d2cfbae1db053dff5de54f5a93b13e96101f2e15f721353379e1d405
+  fingerprint: 41128515d2cfbae1db053dff5de54f5a93b13e96101f2e15f721353379e1d405
+  sha1: sha256:cfbd774aec2466fe6519876174a241fe9e2457eb0c12ba5438f3a0e08340c9cd
+  dependencies: []
+- name: valkey-8
+  version: 5c5b1df41b906ef7822b2de874a91264aed9be6281203bc009e939f11813aa89
+  fingerprint: 5c5b1df41b906ef7822b2de874a91264aed9be6281203bc009e939f11813aa89
+  sha1: sha256:515f7a267a1fb250ba0f085f983f6c966eb71fd1b4fe793111a035583ea4777c
+  dependencies: []
+- name: valkey-9
+  version: 1d5eea95654fd005b41070892d6fd2b8fcbe101b708b0366cbe0fc60013b5949
+  fingerprint: 1d5eea95654fd005b41070892d6fd2b8fcbe101b708b0366cbe0fc60013b5949
+  sha1: sha256:996416afe29ba4f77f6ddd7fe3bb24f5108da22bf62f2aff98cb952229358c58
+  dependencies: []
+no_compression: false
