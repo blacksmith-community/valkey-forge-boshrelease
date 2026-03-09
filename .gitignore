@@ -18,3 +18,5 @@ blobs/*
 tmp
 my*.yml
 *.gz
+src/*
+!src/.gitkeep
