@@ -27,6 +27,13 @@ cat > "${plan_root}/plan.yml" <<EOF
 id: "${plan_id}"
 name: "${plan_name}"
 limit: ${plan_limit}
+type: <%= if plan["type"].include?("standalone")
+            "standalone"
+          elsif plan["type"].include?("cluster")
+            "node"
+          else
+            plan["type"]
+          end %>
 description: |+
   "${plan_description}"
 EOF
@@ -47,91 +54,96 @@ meta:
   size: <%= plan["vm_type"] || 'default' %>
   net:  <%= plan["network"] || 'valkey-service' %>
 
-  <% if plan["valkey_maxmemory-policy"] %>
+<% if plan["valkey_maxmemory-policy"] -%>
   valkey_maxmemory-policy: <%= plan["valkey_maxmemory-policy"] %>
-  <% end -%>
+<% end -%>
 
-  <% if p('valkey.tls.enabled') %>
+<% if p('valkey.tls.enabled') -%>
   valkey:
     tls:
       enabled: true
+<% if_p('valkey.tls.ca') do -%>
       ca: (( file "/var/vcap/jobs/valkey-blacksmith-plans/config/tls/valkey.ca" ))
+<% end -%>
+<% if_p('valkey.tls.ca_cert') do -%>
       ca_cert: (( file "/var/vcap/jobs/valkey-blacksmith-plans/config/tls/valkey.cert" ))
+<% end -%>
+<% if_p('valkey.tls.ca_key') do -%>
       ca_key: (( file "/var/vcap/jobs/valkey-blacksmith-plans/config/tls/valkey.key" ))
-  <% end -%>
-
-  <% if p('valkey.tls.dual-mode') -%>
+<% end -%>
+<% if p('valkey.tls.dual-mode') -%>
       dual-mode: true
-  <% end -%>
+<% end -%>
+<% end -%>
 
-  <% if plan["valkey_maxmemory"] %>
+<% if plan["valkey_maxmemory"] -%>
   valkey_maxmemory: <%= plan["valkey_maxmemory"] %>
-  <% end -%>
+<% end -%>
 
-  <% if plan["valkey_notify-keyspace-events"] %>
+<% if plan["valkey_notify-keyspace-events"] -%>
   valkey_notify-keyspace-events: <%= plan["valkey_notify-keyspace-events"] %>
-  <% end -%>
+<% end -%>
 
-  <% if plan["valkey_slowlog-log-slower-than"] %>
+<% if plan["valkey_slowlog-log-slower-than"] -%>
   valkey_slowlog-log-slower-than: <%= plan["valkey_slowlog-log-slower-than"] %>
-  <% end -%>
+<% end -%>
 
-  <% if plan["valkey_slowlog-max-len"] %>
+<% if plan["valkey_slowlog-max-len"] -%>
   valkey_slowlog-max-len: <%= plan["valkey_slowlog-max-len"] %>
-  <% end -%>
+<% end -%>
 
-  <% if plan.has_key?("valkey_no-appendfsync-on-rewrite") %>
+<% if plan.has_key?("valkey_no-appendfsync-on-rewrite") -%>
   valkey_no-appendfsync-on-rewrite: <%= plan["valkey_no-appendfsync-on-rewrite"] ? "yes" : "no" %>
-  <% end -%>
+<% end -%>
 
-  <% if plan["valkey_auto-aof-rewrite-percentage"] %>
+<% if plan["valkey_auto-aof-rewrite-percentage"] -%>
   valkey_auto-aof-rewrite-percentage: <%= plan["valkey_auto-aof-rewrite-percentage"] %>
-  <% end -%>
+<% end -%>
 
-  <% if plan["valkey_auto-aof-rewrite-min-size"] %>
+<% if plan["valkey_auto-aof-rewrite-min-size"] -%>
   valkey_auto-aof-rewrite-min-size: <%= plan["valkey_auto-aof-rewrite-min-size"] %>
-  <% end -%>
+<% end -%>
 
-  <% if plan["client_timeout"] %>
+<% if plan["client_timeout"] -%>
   client_timeout: <%= plan["client_timeout"] %>
-  <% end -%>
+<% end -%>
 
-  <% if plan["client_tcpkeepalive"] %>
+<% if plan["client_tcpkeepalive"] -%>
   client_tcpkeepalive: <%= plan["client_tcpkeepalive"] %>
-  <% end -%>
+<% end -%>
 
-  <% if plan["client_connections"] %>
+<% if plan["client_connections"] -%>
   client_connections: <%= plan["client_connections"] %>
-  <% end -%>
+<% end -%>
 
-  <% if plan.has_key?("lua_scripting_enabled") %>
+<% if plan.has_key?("lua_scripting_enabled") -%>
   lua_scripting_enabled: <%= plan["lua_scripting_enabled"] %>
-  <% end -%>
+<% end -%>
 
-  <% if plan["azs"] %>
+<% if plan["azs"] -%>
   azs: <%= plan["azs"] %>
-  <% end -%>
+<% end -%>
 
-  <% if plan["type"] =~ /standalone/ %>
-    <% if plan["persist"] %>
+<% if plan["type"] =~ /standalone/ -%>
+<%   if plan["persist"] -%>
   persistent: true
-      <% if plan["disk_type"] %>
+<%     if plan["disk_type"] -%>
   disk_config: { persistent_disk_type: <%= plan["disk_type"] %> }
-      <% else %>
+<%     else -%>
   disk_config: { persistent_disk: <%= plan["disk_size"] || 1_024 %> }
-      <% end -%>
-    <% else %>
+<%     end -%>
+<%   else -%>
   persistent: false
-    <% end %>
-  <% end -%>
+<%   end -%>
+<% end -%>
 
-  <% if plan["type"] =~ /cluster/ && plan['masters'] > 0 %>
+<% if plan["type"] =~ /cluster/ && plan['masters'] && plan['masters'] > 0 -%>
   masters:   <%= plan['masters'] %>
   replicas:  <%= plan['replicas'] || 1 %>
   instances: <%= plan['masters'] + plan['masters'] * (plan['replicas'] || 1) %>
-  <% end -%>
+<% end -%>
 
-  <% if plan["exporter"] %>
+<% if plan["exporter"] -%>
 releases:
 - name:    "prometheus"
   version: "<%= plan["prometheus_release_version"] || "30.2.0" %>"
@@ -147,6 +159,6 @@ instance_groups:
       valkey_exporter:
         valkey:
           password: (( grab meta.password ))
-  <% end -%>
+<% end -%>
 EOF
 <% end -%>
