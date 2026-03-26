@@ -53,11 +53,14 @@ instance_groups:
       #   release: redis-forge
 
       # After (Valkey):
-      - name: cluster-8  # Recommended: Use Valkey 8
+      - name: cluster
         release: valkey-forge
         properties:
           auth:
             password: ((valkey_password))
+
+          valkey:
+            version: 8  # LTS default; can override to 7 or 9
 
           cluster:
             masters: 2
@@ -134,7 +137,7 @@ variables:
 # 2. Test slot distribution: Should match Redis cluster (16384 slots)
 # 3. Update network name from 'redis-service' to 'valkey-service'
 # 4. Change all 'redis.*' properties to 'valkey.*'
-# 5. Change job name from 'cluster-7' to 'cluster-8'
+# 5. Change job name to 'cluster' (set valkey.version property for version control)
 # 6. Ensure same number of masters/replicas as original Redis cluster
 # 7. Enable dual-mode TLS initially for gradual transition
 # 8. Post-deploy script will automatically form cluster

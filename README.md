@@ -9,13 +9,16 @@ Valkey is an open source (BSD) high-performance key/value datastore that support
 
 ## Version Support
 
-This forge supports multiple Valkey versions:
+This forge supports multiple Valkey versions through a single set of parameterized jobs:
 
-- **Valkey 7** (7.2.11) - LTS, migration path from Redis 6/7
-- **Valkey 8** (8.1.4) - **Recommended**, stable production release
+- **Valkey 7** (7.2.11) - Migration path from Redis 6/7
+- **Valkey 8** (8.1.4) - **LTS / Default**, stable production release
 - **Valkey 9** (9.0.0) - Latest with new features
 
-Each version has dedicated standalone and cluster jobs: `standalone-7/8/9` and `cluster-7/8/9`.
+Two generic jobs (`standalone` and `cluster`) use a `valkey.version` property
+(default: `8`) to select which Valkey binary to run. Operators override the
+version per-plan in their deployment configuration. Adding a new major version
+only requires a new package — no job duplication needed.
 
 ## Deploying
 
@@ -76,9 +79,10 @@ Here's a diagram to clear things up:
 
 ### Configuration Options
 
-- *type* - Specify the job type: `standalone-7`, `standalone-8`, or `standalone-9`.
-  This determines which Valkey version is deployed. We recommend `standalone-8`
-  for production use.
+- *type* - Set to `standalone` for a single-node deployment.
+
+- *version* - The Valkey major version to deploy (`7`, `8`, or `9`).
+  Defaults to `8` (LTS). Passed through as the `valkey.version` job property.
 
 - *vm_type* - The name of a BOSH `vm_type` from your cloud-config.
   You can use this to size your Valkey appropriate to your workload
@@ -106,7 +110,7 @@ Here's a diagram to clear things up:
   diskless.
 
   Persistent Valkey instances use the append-only format (AOF),
-  storing the file in `/var/vcap/store/standalone-{7,8,9}/valkey.aof`. The
+  storing the file in `/var/vcap/store/standalone/valkey.aof`. The
   AOF file is fsync'd once every second to balance safety with
   performance.
 
@@ -132,7 +136,7 @@ instance_groups:
         properties:
           plans:
             single-4g:
-              type:      standalone-8
+              type:      standalone
               persist:   true
               disk_size: 4_096
 ```
@@ -150,17 +154,17 @@ instance_groups:
         properties:
           plans:
             small:
-              type:      standalone-8
+              type:      standalone
               persist:   true
               disk_size: 4_096
 
             large:
-              type:      standalone-8
+              type:      standalone
               persist:   true
               disk_size: 16_384
 
             cache:
-              type: standalone-8
+              type: standalone
 ```
 
 ## Clustered Topology
@@ -201,9 +205,10 @@ TLS connections between cluster nodes use stunnel for secure communication.
 
 ### Configuration Options
 
-- *type* - Specify the job type: `cluster-7`, `cluster-8`, or `cluster-9`.
-  This determines which Valkey version is deployed. We recommend `cluster-8`
-  for production use.
+- *type* - Set to `cluster` for a sharded multi-node deployment.
+
+- *version* - The Valkey major version to deploy (`7`, `8`, or `9`).
+  Defaults to `8` (LTS). Passed through as the `valkey.version` job property.
 
 - *vm_type* - The name of a BOSH `vm_type` from your cloud-config.
   You can use this to size your Valkey appropriate to your workload
@@ -243,7 +248,7 @@ instance_groups:
         properties:
           plans:
             clustered:
-              type:     cluster-8
+              type:     cluster
               masters:  2
               replicas: 2
 ```
@@ -261,12 +266,12 @@ instance_groups:
         properties:
           plans:
             clustered-4x1:
-              type:     cluster-8
+              type:     cluster
               masters:  4
               replicas: 1
 
             minimal:
-              type:     cluster-8
+              type:     cluster
               vm_type:  very-large
               masters:  1
               replicas: 2
@@ -354,7 +359,7 @@ Enable Prometheus metrics collection by adding the `exporter: true` parameter to
 ```yaml
 plans:
   monitored-standalone:
-    type: standalone-8
+    type: standalone
     persist: true
     exporter: true
     prometheus_release_version: "30.2.0"  # optional, defaults to 30.2.0
@@ -410,7 +415,7 @@ Verify clustering is enabled:
 ```bash
 bosh -d service-instance-GUID ssh node/0
 sudo su - vcap
-/var/vcap/packages/valkey-8/bin/valkey-cli -a PASSWORD INFO cluster
+/var/vcap/packages/valkey-{VERSION}/bin/valkey-cli -a PASSWORD INFO cluster
 ```
 
 ### TLS Connection Issues
@@ -418,15 +423,15 @@ sudo su - vcap
 Verify certificates are present:
 ```bash
 bosh -d service-instance-GUID ssh standalone/0
-ls -la /var/vcap/jobs/standalone-8/config/tls/
+ls -la /var/vcap/jobs/standalone/config/tls/
 ```
 
 Test TLS connection:
 ```bash
 valkey-cli --tls \
-  --cert /var/vcap/data/standalone-8/valkey.crt \
-  --key /var/vcap/data/standalone-8/valkey.key \
-  --cacert /var/vcap/jobs/standalone-8/config/tls/valkey.ca \
+  --cert /var/vcap/data/standalone/valkey.crt \
+  --key /var/vcap/data/standalone/valkey.key \
+  --cacert /var/vcap/jobs/standalone/config/tls/valkey.ca \
   -h 127.0.0.1 -p 16379 -a PASSWORD PING
 ```
 
@@ -456,8 +461,8 @@ cat /sys/kernel/mm/transparent_hugepage/enabled  # Should be [never]
 ### Version File Locations
 
 Each deployed instance creates version files:
-- `/var/vcap/store/{standalone,cluster}-{7,8,9}/VALKEY_VERSION` - Version number only
-- `/var/vcap/store/{standalone,cluster}-{7,8,9}/VALKEY_VERSION_FULL` - Full version output
+- `/var/vcap/store/{standalone,cluster}/VALKEY_VERSION` - Version number only
+- `/var/vcap/store/{standalone,cluster}/VALKEY_VERSION_FULL` - Full version output
 
 ## Contributing
 
