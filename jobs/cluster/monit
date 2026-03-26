@@ -1,0 +1,5 @@
+check process cluster
+  with pidfile /var/vcap/sys/run/bpm/cluster/cluster.pid
+  start program "/var/vcap/jobs/bpm/bin/bpm start cluster"
+  stop program "/var/vcap/jobs/bpm/bin/bpm stop cluster"
+  group vcap
