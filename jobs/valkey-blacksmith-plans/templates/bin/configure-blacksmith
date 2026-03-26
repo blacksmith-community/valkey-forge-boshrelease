@@ -124,6 +124,10 @@ meta:
   azs: <%= plan["azs"] %>
 <% end -%>
 
+<% if plan["version"] -%>
+  valkey_version: <%= plan["version"] %>
+<% end -%>
+
 <% if plan["type"] =~ /standalone/ -%>
 <%   if plan["persist"] -%>
   persistent: true

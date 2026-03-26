@@ -1,7 +1,6 @@
 #!/bin/bash
+set -eu
 
-set -euv
-
-safe gen "${CREDENTIALS}/valkey/system" password
+safe gen $CREDENTIALS/valkey/system password
 
 exit 0

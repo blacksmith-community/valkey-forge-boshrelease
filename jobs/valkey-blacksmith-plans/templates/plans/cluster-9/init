@@ -1,6 +1,0 @@
-#!/bin/bash
-set -eu
-
-safe gen $CREDENTIALS/valkey/system password
-
-exit 0
