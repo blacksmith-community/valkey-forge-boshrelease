@@ -19,6 +19,16 @@ echo never > /sys/kernel/mm/transparent_hugepage/enabled || true
 
 # Create Valkey version files
 mkdir -p /var/vcap/store/cluster
+
+# Initialize ACL file if empty/missing (aclfile overrides requirepass, so the
+# default user must be defined here). On subsequent boots the file already
+# contains per-binding users from ACL SAVE, so only seed on first run.
+ACL_FILE=/var/vcap/store/cluster/users.acl
+if [ ! -s "$ACL_FILE" ]; then
+  PASS=$(grep requirepass $JOB_DIR/config/valkey.conf | awk '{print $2}')
+  echo "user default on >${PASS} sanitize-payload ~* &* +@all" > "$ACL_FILE"
+  chown vcap:vcap "$ACL_FILE"
+fi
 chpst -u vcap:vcap valkey-server --version > /var/vcap/store/cluster/VALKEY_VERSION_FULL
 chpst -u vcap:vcap valkey-server --version | sed -e 's/.* v=\([^ ]*\).*/\1/' > /var/vcap/store/cluster/VALKEY_VERSION
 chown vcap:vcap /var/vcap/store/cluster/VALKEY_VERSION_FULL /var/vcap/store/cluster/VALKEY_VERSION
