@@ -19,30 +19,6 @@ templates:
   plans/cluster/credentials.yml:    plans/cluster/credentials.yml
   plans/cluster/init:               plans/cluster/init
 
-  plans/standalone-7/manifest.yml:    plans/standalone-7/manifest.yml
-  plans/standalone-7/credentials.yml: plans/standalone-7/credentials.yml
-  plans/standalone-7/init:            plans/standalone-7/init
-
-  plans/cluster-7/manifest.yml:       plans/cluster-7/manifest.yml
-  plans/cluster-7/credentials.yml:    plans/cluster-7/credentials.yml
-  plans/cluster-7/init:               plans/cluster-7/init
-
-  plans/standalone-8/manifest.yml:    plans/standalone-8/manifest.yml
-  plans/standalone-8/credentials.yml: plans/standalone-8/credentials.yml
-  plans/standalone-8/init:            plans/standalone-8/init
-
-  plans/cluster-8/manifest.yml:       plans/cluster-8/manifest.yml
-  plans/cluster-8/credentials.yml:    plans/cluster-8/credentials.yml
-  plans/cluster-8/init:               plans/cluster-8/init
-
-  plans/standalone-9/manifest.yml:    plans/standalone-9/manifest.yml
-  plans/standalone-9/credentials.yml: plans/standalone-9/credentials.yml
-  plans/standalone-9/init:            plans/standalone-9/init
-
-  plans/cluster-9/manifest.yml:       plans/cluster-9/manifest.yml
-  plans/cluster-9/credentials.yml:    plans/cluster-9/credentials.yml
-  plans/cluster-9/init:               plans/cluster-9/init
-
 properties:
   environment:
     description: "The environment name of the cloudfoundry/bosh deployment"

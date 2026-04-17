@@ -48,7 +48,7 @@ instance_groups:
       #   release: redis-forge
 
       # After (Valkey):
-      - name: standalone-8  # Recommended: Use Valkey 8
+      - name: standalone
         release: valkey-forge
         properties:
           auth:
@@ -58,6 +58,7 @@ instance_groups:
 
           # Property name changes: redis.* -> valkey.*
           valkey:
+            version: 8  # LTS default; can override to 7 or 9
             maxmemory: 2gb
             maxmemory-policy: allkeys-lru
             notify-keyspace-events: ""
@@ -104,7 +105,7 @@ variables:
 # Migration Notes:
 # 1. Update network name from 'redis-service' to 'valkey-service' in cloud-config
 # 2. Change all 'redis.*' properties to 'valkey.*'
-# 3. Change job name from 'standalone-7' to 'standalone-8' (recommended)
+# 3. Change job name to 'standalone' (set valkey.version property for version control)
 # 4. Update credentials variable names for clarity
 # 5. If using TLS, enable dual-mode initially to allow gradual client migration
 # 6. Test thoroughly before deploying to production

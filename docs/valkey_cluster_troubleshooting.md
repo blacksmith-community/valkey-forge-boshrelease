@@ -21,7 +21,7 @@ Comprehensive troubleshooting guide for Valkey cluster deployments in BOSH/Black
 # Check cluster status from any node
 bosh -d service-instance-GUID ssh node/0
 sudo su - vcap
-export VALKEY_PASSWORD=$(cat /var/vcap/jobs/cluster-8/config/valkey.conf | grep "^requirepass" | awk '{print $2}')
+export VALKEY_PASSWORD=$(cat /var/vcap/jobs/cluster/config/valkey.conf | grep "^requirepass" | awk '{print $2}')
 /var/vcap/packages/valkey-8/bin/valkey-cli -a $VALKEY_PASSWORD CLUSTER INFO
 
 # Get cluster nodes
@@ -65,7 +65,7 @@ cluster_known_nodes:6  # Should match your instance count
 2. **Check post-deploy logs:**
    ```bash
    bosh -d service-instance-GUID logs node/0
-   # Look in /var/vcap/sys/log/cluster-8/post-deploy.*
+   # Look in /var/vcap/sys/log/cluster/post-deploy.*
    ```
 
 3. **Verify clustering is enabled:**
@@ -81,7 +81,7 @@ cluster_known_nodes:6  # Should match your instance count
 | Cause | Solution |
 |-------|----------|
 | DNS resolution failure | Check BOSH DNS: `dig node-0.valkey-service.service.cf.internal` |
-| Incorrect password | Verify password in `/var/vcap/jobs/cluster-8/config/valkey.conf` |
+| Incorrect password | Verify password in `/var/vcap/jobs/cluster/config/valkey.conf` |
 | Port blocked | Check security groups allow 6379/16379 |
 | Node not accessible | Verify network configuration and routing |
 | Bootstrap flag missing | Redeploy with correct bootstrap configuration |
@@ -235,8 +235,8 @@ nc -zv 10.0.1.2 16379  # Cluster bus for node on 6379
 1. **Authentication Failure:**
    ```bash
    # Check masterauth matches master's requirepass
-   grep "masterauth" /var/vcap/jobs/cluster-8/config/valkey.conf
-   grep "requirepass" /var/vcap/jobs/cluster-8/config/valkey.conf
+   grep "masterauth" /var/vcap/jobs/cluster/config/valkey.conf
+   grep "requirepass" /var/vcap/jobs/cluster/config/valkey.conf
    # These should match
    ```
 
@@ -309,15 +309,15 @@ bosh -d service-instance-GUID ssh node/2  # A replica of failed master
 
 ```bash
 # Verify TLS is enabled
-grep "tls-port" /var/vcap/jobs/cluster-8/config/valkey.conf
+grep "tls-port" /var/vcap/jobs/cluster/config/valkey.conf
 
 # Check certificates exist and are valid
-ls -la /var/vcap/jobs/cluster-8/config/tls/
-ls -la /var/vcap/data/cluster-8/valkey.{crt,key}
+ls -la /var/vcap/jobs/cluster/config/tls/
+ls -la /var/vcap/data/cluster/valkey.{crt,key}
 
 # Verify certificate dates
-openssl x509 -in /var/vcap/jobs/cluster-8/config/tls/valkey.cert -noout -dates
-openssl x509 -in /var/vcap/data/cluster-8/valkey.crt -noout -dates
+openssl x509 -in /var/vcap/jobs/cluster/config/tls/valkey.cert -noout -dates
+openssl x509 -in /var/vcap/data/cluster/valkey.crt -noout -dates
 ```
 
 **Common Issues:**
@@ -325,7 +325,7 @@ openssl x509 -in /var/vcap/data/cluster-8/valkey.crt -noout -dates
 1. **Certificate Expired:**
    ```bash
    # Check expiration
-   openssl x509 -in /var/vcap/data/cluster-8/valkey.crt -noout -enddate
+   openssl x509 -in /var/vcap/data/cluster/valkey.crt -noout -enddate
 
    # Regenerate (will require redeploy)
    bosh -d service-instance-GUID recreate
@@ -334,8 +334,8 @@ openssl x509 -in /var/vcap/data/cluster-8/valkey.crt -noout -dates
 2. **Wrong Certificate Permissions:**
    ```bash
    # Fix permissions
-   sudo chown vcap:vcap /var/vcap/data/cluster-8/valkey.*
-   sudo chmod 600 /var/vcap/data/cluster-8/valkey.key
+   sudo chown vcap:vcap /var/vcap/data/cluster/valkey.*
+   sudo chmod 600 /var/vcap/data/cluster/valkey.key
    ```
 
 3. **Stunnel Not Running (for cluster TLS):**
@@ -344,7 +344,7 @@ openssl x509 -in /var/vcap/data/cluster-8/valkey.crt -noout -dates
    ps aux | grep stunnel
 
    # Check stunnel logs
-   cat /var/vcap/sys/log/cluster-8/post-deploy.*
+   cat /var/vcap/sys/log/cluster/post-deploy.*
    ```
 
 **Test TLS Connection:**
@@ -353,16 +353,16 @@ openssl x509 -in /var/vcap/data/cluster-8/valkey.crt -noout -dates
 # Direct TLS test
 /var/vcap/packages/valkey-8/bin/valkey-cli \
   --tls \
-  --cert /var/vcap/data/cluster-8/valkey.crt \
-  --key /var/vcap/data/cluster-8/valkey.key \
-  --cacert /var/vcap/jobs/cluster-8/config/tls/valkey.ca \
+  --cert /var/vcap/data/cluster/valkey.crt \
+  --key /var/vcap/data/cluster/valkey.key \
+  --cacert /var/vcap/jobs/cluster/config/tls/valkey.ca \
   -h 127.0.0.1 -p 16379 -a $PASSWORD PING
 
 # OpenSSL test
 openssl s_client -connect 127.0.0.1:16379 \
-  -cert /var/vcap/data/cluster-8/valkey.crt \
-  -key /var/vcap/data/cluster-8/valkey.key \
-  -CAfile /var/vcap/jobs/cluster-8/config/tls/valkey.ca
+  -cert /var/vcap/data/cluster/valkey.crt \
+  -key /var/vcap/data/cluster/valkey.key \
+  -CAfile /var/vcap/jobs/cluster/config/tls/valkey.ca
 ```
 
 ## Performance Problems
@@ -426,7 +426,7 @@ vmstat 1 5
    # Should show: always madvise [never]
 
    # If not disabled, check pre-start script ran
-   cat /var/vcap/sys/log/cluster-8/pre-start.*
+   cat /var/vcap/sys/log/cluster/pre-start.*
    ```
 
 **Performance Tuning:**
@@ -494,13 +494,13 @@ vmstat 1 5
 ```bash
 # 1. Stop all Valkey processes
 bosh -d service-instance-GUID ssh node/0
-sudo monit stop cluster-8
+sudo monit stop cluster
 
 # 2. Remove cluster state files from ALL nodes
-sudo rm -f /var/vcap/store/cluster-8/state*
+sudo rm -f /var/vcap/store/cluster/state*
 
 # 3. Start processes
-sudo monit start cluster-8
+sudo monit start cluster
 
 # 4. Wait for processes to start
 watch 'sudo monit summary'
@@ -513,14 +513,14 @@ bosh -d service-instance-GUID run-errand post-deploy
 
 ```bash
 # 1. Stop Valkey
-sudo monit stop cluster-8
+sudo monit stop cluster
 
 # 2. Restore AOF file
-sudo cp /var/vcap/store/backups/cluster-8/valkey.aof /var/vcap/store/cluster-8/valkey.aof
-sudo chown vcap:vcap /var/vcap/store/cluster-8/valkey.aof
+sudo cp /var/vcap/store/backups/cluster/valkey.aof /var/vcap/store/cluster/valkey.aof
+sudo chown vcap:vcap /var/vcap/store/cluster/valkey.aof
 
 # 3. Start Valkey
-sudo monit start cluster-8
+sudo monit start cluster
 
 # 4. Verify data
 /var/vcap/packages/valkey-8/bin/valkey-cli -a $PASSWORD DBSIZE
@@ -543,13 +543,13 @@ sudo monit start cluster-8
 1. **Regular Health Checks:**
    ```bash
    # Automated monitoring script
-   */5 * * * * /var/vcap/jobs/cluster-8/bin/health-check.sh
+   */5 * * * * /var/vcap/jobs/cluster/bin/health-check.sh
    ```
 
 2. **Backup Strategy:**
    ```bash
    # Daily AOF backups
-   0 2 * * * cp /var/vcap/store/cluster-8/valkey.aof /var/vcap/store/backups/cluster-8/valkey-$(date +\%Y\%m\%d).aof
+   0 2 * * * cp /var/vcap/store/cluster/valkey.aof /var/vcap/store/backups/cluster/valkey-$(date +\%Y\%m\%d).aof
    ```
 
 3. **Monitoring Alerts:**

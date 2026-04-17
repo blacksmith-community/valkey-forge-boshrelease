@@ -86,7 +86,7 @@ sudo cp /var/vcap/store/standalone-*/dump.rdb /tmp/backup-$(date +%Y%m%d).rdb
 
 1. **Create Valkey Service Instance:**
    ```bash
-   cf create-service valkey standalone-8 my-valkey-instance
+   cf create-service valkey standalone my-valkey-instance
    cf service my-valkey-instance  # Wait for completion
    ```
 
@@ -105,10 +105,10 @@ sudo cp /var/vcap/store/standalone-*/dump.rdb /tmp/backup-$(date +%Y%m%d).rdb
    # Method A: Copy RDB file
    bosh -d valkey-service-instance scp /tmp/redis-dump.rdb standalone/0:/tmp/
    bosh -d valkey-service-instance ssh standalone/0
-   sudo monit stop standalone-8
-   sudo cp /tmp/redis-dump.rdb /var/vcap/store/standalone-8/dump.rdb
-   sudo chown vcap:vcap /var/vcap/store/standalone-8/dump.rdb
-   sudo monit start standalone-8
+   sudo monit stop standalone
+   sudo cp /tmp/redis-dump.rdb /var/vcap/store/standalone/dump.rdb
+   sudo chown vcap:vcap /var/vcap/store/standalone/dump.rdb
+   sudo monit start standalone
 
    # Method B: RESTORE commands (for selective migration)
    # See migration script: redis-to-valkey-dump-restore.pl
@@ -144,7 +144,7 @@ sudo cp /var/vcap/store/standalone-*/dump.rdb /tmp/backup-$(date +%Y%m%d).rdb
 
 1. **Deploy Valkey Alongside Redis:**
    ```bash
-   cf create-service valkey standalone-8 my-valkey-blue
+   cf create-service valkey standalone my-valkey-blue
    ```
 
 2. **Replicate Data:**
@@ -299,7 +299,7 @@ properties:
 properties:
   plans:
     small:
-      type: standalone-8  # Version change
+      type: standalone  # Version change
       persist: true
       disk_size: 4_096
       valkey_maxmemory-policy: allkeys-lru  # Property rename
@@ -318,7 +318,7 @@ properties:
 
 ```bash
 # 1. Create Valkey cluster with same topology
-cf create-service valkey cluster-8-2x2 my-valkey-cluster \
+cf create-service valkey cluster-2x2 my-valkey-cluster \
   -c '{"masters": 2, "replicas": 2}'
 
 # 2. Use cluster-aware migration tool
