@@ -24,7 +24,7 @@ fetch:
 	@echo "Fetching Valkey 9 ($(VALKEY_9_VERSION))..."
 	curl -sL "https://github.com/valkey-io/valkey/archive/refs/tags/$(VALKEY_9_VERSION).tar.gz" -o "blobs/valkey-$(VALKEY_9_VERSION).tar.gz"
 	@echo "Fetching stunnel ($(STUNNEL_VERSION))..."
-	curl -sL "https://www.stunnel.org/downloads/stunnel-$(STUNNEL_VERSION).tar.gz" -o "blobs/stunnel-$(STUNNEL_VERSION).tar.gz"
+	curl -sL "https://www.stunnel.org/archive/5.x/stunnel-$(STUNNEL_VERSION).tar.gz" -o "blobs/stunnel-$(STUNNEL_VERSION).tar.gz"
 	@echo "All tarballs downloaded to blobs/"
 	@ls -lh blobs/
 
