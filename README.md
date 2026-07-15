@@ -11,9 +11,9 @@ Valkey is an open source (BSD) high-performance key/value datastore that support
 
 This forge supports multiple Valkey versions through a single set of parameterized jobs:
 
-- **Valkey 7** (7.2.11) - Migration path from Redis 6/7
-- **Valkey 8** (8.1.4) - **LTS / Default**, stable production release
-- **Valkey 9** (9.0.0) - Latest with new features
+- **Valkey 7** (7.2.13) - Migration path from Redis 6/7
+- **Valkey 8** (8.1.8) - **LTS / Default**, stable production release
+- **Valkey 9** (9.0.4) - Latest with new features
 
 Two generic jobs (`standalone` and `cluster`) use a `valkey.version` property
 (default: `8`) to select which Valkey binary to run. Operators override the

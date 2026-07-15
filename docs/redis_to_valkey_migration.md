@@ -10,10 +10,10 @@ Valkey is protocol-compatible with Redis, making migration straightforward. This
 
 | Redis Version | Target Valkey Version | Compatibility | Risk Level |
 |---------------|----------------------|---------------|------------|
-| Redis 6.x | Valkey 7.2.11 | High | Low |
-| Redis 7.0-7.2 | Valkey 7.2.11 | High | Low |
-| Redis 7.2+ | Valkey 8.1.4 | Medium | Medium |
-| Any version | Valkey 9.0.0 | Medium | Medium-High |
+| Redis 6.x | Valkey 7.2.13 | High | Low |
+| Redis 7.0-7.2 | Valkey 7.2.13 | High | Low |
+| Redis 7.2+ | Valkey 8.1.8 | Medium | Medium |
+| Any version | Valkey 9.0.4 | Medium | Medium-High |
 
 **Recommendation:**
 - Redis 6/7 → **Valkey 7** (safest, tested migration path)

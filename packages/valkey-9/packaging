@@ -9,7 +9,7 @@ CPUS=$(grep -c ^processor /proc/cpuinfo)
 # $BOSH_INSTALL_TARGET - where you copy/install files to be included in package
 export HOME=/var/vcap
 
-tar -xzvf valkey-9.0.0.tar.gz
-cd valkey-9.0.0
+tar -xzvf valkey-9.0.4.tar.gz
+cd valkey-9.0.4
 export PREFIX=${BOSH_INSTALL_TARGET}
 make BUILD_TLS=yes -j${CPUS} && make install

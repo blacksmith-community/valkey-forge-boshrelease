@@ -50,11 +50,11 @@ sudo /tmp/redis-to-valkey-dump-restore.pl \
 
 | Source Redis | Target Valkey | Risk Level | Notes |
 |--------------|---------------|------------|-------|
-| Redis 6.x | Valkey 7.2.11 | Low | Recommended path |
-| Redis 7.0-7.2 | Valkey 7.2.11 | Low | Compatible |
-| Redis 7.2+ | Valkey 8.1.4 | Medium | Test thoroughly |
+| Redis 6.x | Valkey 7.2.13 | Low | Recommended path |
+| Redis 7.0-7.2 | Valkey 7.2.13 | Low | Compatible |
+| Redis 7.2+ | Valkey 8.1.8 | Medium | Test thoroughly |
 
-**Recommendation:** Redis 6 users should migrate to Valkey 7.2.11 for the safest path.
+**Recommendation:** Redis 6 users should migrate to Valkey 7.2.13 for the safest path.
 
 ## Common Options
 
