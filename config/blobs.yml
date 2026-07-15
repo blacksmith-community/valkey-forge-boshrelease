@@ -1,12 +1,16 @@
 stunnel-5.78.tar.gz:
   size: 929224
+  object_id: ea10886f-6de8-47fe-4fcc-425f837c0ca9
   sha: sha256:8727e53bb8b7528f850327a2a149158422c02183bc120d1d733cc65b1e2c349d
 valkey-7.2.13.tar.gz:
   size: 3446117
+  object_id: 640d0b6f-abb9-4b20-4f8a-a5182e02588d
   sha: sha256:31f19d42c983749e81e69654a8c45dcdc9dc212c23cf11b7bdc4928b328d50a9
 valkey-8.1.8.tar.gz:
   size: 3831092
+  object_id: 620fd77b-6068-4eb5-55e7-7b9b5db06b7d
   sha: sha256:0edc455ba7524f0cfa4f73fdc70b91dec6941e893a09bcbdd012470d08043cec
 valkey-9.0.4.tar.gz:
   size: 4127664
+  object_id: 96915435-dade-4cf5-78e8-e38b1e949c5e
   sha: sha256:8d65e12cc9edb14d117b56fd33300e7b8cde2c087356de3f055d44689667670b
