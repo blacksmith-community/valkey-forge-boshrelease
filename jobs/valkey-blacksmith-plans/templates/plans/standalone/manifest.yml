@@ -32,8 +32,8 @@ releases:
 
 stemcells:
 - alias: default
-  os: ubuntu-jammy
-  version: latest
+  os: <%= p('stemcell_os') %>
+  version: <%= p('stemcell_version') %>
 
 update:
   canaries: 1

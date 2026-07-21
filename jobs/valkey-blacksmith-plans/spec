@@ -30,6 +30,14 @@ properties:
     description: "BOSH Cloud Config Persistent Disk Type Name (optional)"
     default: ""
 
+  stemcell_os:
+    description: "Stemcell OS for service instance deployments"
+    default: ubuntu-jammy
+
+  stemcell_version:
+    description: "Stemcell version for service instance deployments"
+    default: latest
+
   service.id:
     description: "Machine-friendly name for this service."
     default: valkey
