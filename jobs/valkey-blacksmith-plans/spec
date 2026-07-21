@@ -32,7 +32,7 @@ properties:
 
   stemcell_os:
     description: "Stemcell OS for service instance deployments"
-    default: ubuntu-jammy
+    default: ubuntu-noble
 
   stemcell_version:
     description: "Stemcell version for service instance deployments"
