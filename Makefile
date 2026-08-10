@@ -3,16 +3,19 @@ VALKEY_8_VERSION = 8.1.4
 VALKEY_9_VERSION = 9.0.0
 STUNNEL_VERSION = 5.72
 
+PLAN_TEMPLATES = jobs/valkey-blacksmith-plans/templates/plans
+
 .DEFAULT_GOAL := targets
-.PHONY: targets fetch add-blobs blobs clean dev
+.PHONY: targets fetch add-blobs blobs clean dev check-plans
 
 targets:
 	@echo "Available targets:"
-	@echo "  fetch      - Download all Valkey and stunnel tarballs"
-	@echo "  add-blobs  - Add downloaded tarballs to BOSH blobs"
-	@echo "  blobs      - fetch + add-blobs (complete workflow)"
-	@echo "  dev        - Create development release tarball"
-	@echo "  clean      - Remove downloaded tarballs and dev release"
+	@echo "  fetch       - Download all Valkey and stunnel tarballs"
+	@echo "  add-blobs   - Add downloaded tarballs to BOSH blobs"
+	@echo "  blobs       - fetch + add-blobs (complete workflow)"
+	@echo "  check-plans - Verify -classic plans match their base plans"
+	@echo "  dev         - Create development release tarball"
+	@echo "  clean       - Remove downloaded tarballs and dev release"
 
 fetch:
 	@echo "Creating blobs directory..."
@@ -39,6 +42,27 @@ add-blobs:
 	bosh add-blob "blobs/stunnel-$(STUNNEL_VERSION).tar.gz" "stunnel-$(STUNNEL_VERSION).tar.gz"
 	@echo "Current blobs:"
 	bosh blobs
+
+# The -classic plans are the same deployment as their base plan; only credentials.yml
+# differs (it omits the ACL trigger fields). manifest.yml and init MUST stay identical,
+# or the two credential families will silently drift apart. BOSH job specs key the
+# templates map on the source path, so one file cannot be mapped to two destinations --
+# the copies are unavoidable, and this target is what keeps them honest.
+check-plans:
+	@echo "Checking -classic plans against their base plans..."
+	@rc=0; \
+	for plan in standalone cluster; do \
+	  for file in manifest.yml init; do \
+	    if diff -u "$(PLAN_TEMPLATES)/$$plan/$$file" "$(PLAN_TEMPLATES)/$$plan-classic/$$file"; then \
+	      echo "  ok: $$plan-classic/$$file"; \
+	    else \
+	      echo "  DRIFT: $$plan-classic/$$file differs from $$plan/$$file"; \
+	      rc=1; \
+	    fi; \
+	  done; \
+	done; \
+	if [ $$rc -ne 0 ]; then echo "check-plans FAILED"; exit 1; fi; \
+	echo "All -classic plans match their base plans."
 
 clean:
 	@echo "Cleaning up blobs directory..."
