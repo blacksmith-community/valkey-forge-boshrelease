@@ -61,6 +61,14 @@ properties:
     description: "A global limit on the number of Valkey services (regardless of the plan); 0 = unlimited."
     default: 0
 
+  service.stemcell:
+    description: "The stemcell version to use for new valkey services."
+    default: latest
+
+  service.stemcell_os:
+    description: "The stemcell OS to use for new valkey services."
+    default: ubuntu-jammy
+
   valkey.tls.enabled:
     description: "Should the Valkey use TLS"
     default: false
