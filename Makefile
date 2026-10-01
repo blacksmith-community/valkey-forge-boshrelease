@@ -4,7 +4,7 @@ VALKEY_9_VERSION = 9.0.4
 STUNNEL_VERSION = 5.78
 
 .DEFAULT_GOAL := targets
-.PHONY: targets fetch add-blobs blobs clean dev
+.PHONY: targets fetch add-blobs blobs clean dev test
 
 targets:
 	@echo "Available targets:"
@@ -12,6 +12,7 @@ targets:
 	@echo "  add-blobs  - Add downloaded tarballs to BOSH blobs"
 	@echo "  blobs      - fetch + add-blobs (complete workflow)"
 	@echo "  dev        - Create development release tarball"
+	@echo "  test       - Render job templates and check them (needs bosh-template and rspec gems)"
 	@echo "  clean      - Remove downloaded tarballs and dev release"
 
 fetch:
@@ -53,3 +54,6 @@ dev:
 	@echo "Development release created: valkey-forge-dev.tar.gz"
 
 blobs: fetch add-blobs
+
+test:
+	ruby -e 'require "rspec/core"; exit RSpec::Core::Runner.run(["spec"])'

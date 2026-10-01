@@ -11,7 +11,7 @@ openssl x509 -req -in $DATA_DIR/valkey.csr -CA $JOB_DIR/config/tls/valkey.cert -
 cp $JOB_DIR/config/tls/valkey.ca /usr/local/share/ca-certificates/valkey.crt
 update-ca-certificates
 
-chown vcap:vcap $DATA_DIR/*
+chown vcap:vcap $DATA_DIR $DATA_DIR/*
 
 # System configuration for Valkey
 sysctl vm.overcommit_memory=1

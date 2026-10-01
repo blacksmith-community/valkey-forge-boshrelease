@@ -328,7 +328,7 @@ Some of these parameters may depend on other parameters or plan model properties
 | Parameter | Description | Default | Notes |
 | --------- | ----------- | ------- | ----- |
 | auth.password | The password required of clients wishing to use this Valkey instance | | |
-| persistent | Whether or not the Valkey dataset should persist to disk (via AOF semantics) | true | |
+| persistent | Whether or not the Valkey dataset should persist to disk (via AOF semantics). A non-persistent instance keeps no RDB snapshots either. | true | |
 | lua_scripting_enabled | Whether or not to allow Lua scripting | true | |
 | client_connections | Set the max number of connected clients at the same time | 10000 | |
 | client_timeout | Close the connection after a client is idle for N seconds | 0 | 0 = disable |
