@@ -29,6 +29,6 @@ if [ ! -s "$ACL_FILE" ]; then
   echo "user default on >${PASS} sanitize-payload ~* &* +@all" > "$ACL_FILE"
   chown vcap:vcap "$ACL_FILE"
 fi
-chpst -u vcap:vcap valkey-server --version > /var/vcap/store/standalone/VALKEY_VERSION_FULL
-chpst -u vcap:vcap valkey-server --version | sed -e 's/.* v=\([^ ]*\).*/\1/' > /var/vcap/store/standalone/VALKEY_VERSION
+setpriv --reuid=vcap --regid=vcap --groups=vcap -- valkey-server --version > /var/vcap/store/standalone/VALKEY_VERSION_FULL
+setpriv --reuid=vcap --regid=vcap --groups=vcap -- valkey-server --version | sed -e 's/.* v=\([^ ]*\).*/\1/' > /var/vcap/store/standalone/VALKEY_VERSION
 chown vcap:vcap /var/vcap/store/standalone/VALKEY_VERSION_FULL /var/vcap/store/standalone/VALKEY_VERSION
