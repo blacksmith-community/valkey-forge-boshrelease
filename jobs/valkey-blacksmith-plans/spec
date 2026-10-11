@@ -40,15 +40,15 @@ properties:
 
   bpm_release.version:
     description: "Version of the bpm release that service instance deployments use. Stemcells without runit need 1.4.41 or later."
-    default: "1.4.20"
+    default: "1.4.41"
 
   bpm_release.url:
     description: "URL of the bpm release tarball that service instance deployments use."
-    default: "https://bosh.io/d/github.com/cloudfoundry/bpm-release?v=1.4.20"
+    default: "https://bosh.io/d/github.com/cloudfoundry/bpm-release?v=1.4.41"
 
   bpm_release.sha1:
     description: "Checksum of the bpm release tarball that service instance deployments use."
-    default: "sha256:1984129b352cd414e29a7dcffcf076049a776afa511cd44b587065f6e618cc6d"
+    default: "sha256:7b445508d63d2171d892ba33f836087e1e519b9782f44c5fa5290323616ca8e6"
 
   service.id:
     description: "Machine-friendly name for this service."
