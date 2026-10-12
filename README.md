@@ -308,6 +308,8 @@ properties:
 
 TLS versions supported: TLSv1.2, TLSv1.3
 
+When TLS is on, every binding carries a `ca_certificate` field. It holds the PEM certificate of the CA that signed the instance certificate, which is the same value as the `valkey.tls.ca` property in the plan manifest. A client can verify the server by trusting that certificate, for example with `valkey-cli --tls --cacert` or with the `-CAfile` option of `openssl s_client`. The field is new in 1.4.0, and every other field in the binding is unchanged.
+
 ## Security - Hard Coded Valkey Configuration Parameters
 
 For security reasons the following Valkey commands have been disabled in all plan types:
