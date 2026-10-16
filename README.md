@@ -79,7 +79,7 @@ Here's a diagram to clear things up:
 
 ### Configuration Options
 
-- *type* - Set to `standalone` for a single-node deployment.
+- *type* - Set to `standalone` for a single-node deployment, or `standalone-classic` for the same deployment with shared-password credentials (see [Credential Modes](#credential-modes)).
 
 - *version* - The Valkey major version to deploy (`7`, `8`, or `9`).
   Defaults to `8` (LTS). Passed through as the `valkey.version` job property.
@@ -205,7 +205,7 @@ TLS connections between cluster nodes use stunnel for secure communication.
 
 ### Configuration Options
 
-- *type* - Set to `cluster` for a sharded multi-node deployment.
+- *type* - Set to `cluster` for a sharded multi-node deployment, or `cluster-classic` for the same deployment with shared-password credentials (see [Credential Modes](#credential-modes)).
 
 - *version* - The Valkey major version to deploy (`7`, `8`, or `9`).
   Defaults to `8` (LTS). Passed through as the `valkey.version` job property.
@@ -276,6 +276,35 @@ instance_groups:
               masters:  1
               replicas: 2
 ```
+
+## Credential Modes
+
+Each topology comes in two flavours. They deploy exactly the same Valkey, and differ only in the credentials a bound application receives.
+
+**Classic** (`standalone-classic`, `cluster-classic`)
+
+Every binding receives the same shared password. An application authenticates with a single-argument `AUTH <password>`, which is what password-only clients expect. Nothing is created or removed on the Valkey instance when an application binds or unbinds. The binding omits the `admin_password` and `service_type` fields, which is how the broker knows to skip its per-binding ACL handling.
+
+**Per-binding ACL** (`standalone`, `cluster`)
+
+The broker creates a dedicated Valkey ACL user for each binding, and hands back that user's name and password. Applications must authenticate with the two-argument `AUTH <username> <password>`. A client that sends only a password authenticates as the `default` user, and is rejected with `WRONGPASS`. Unbinding removes the ACL user.
+
+Choose per plan, via the plan's `type`:
+
+```
+plans:
+  # existing password-only applications
+  shared:
+    type: standalone-classic
+    version: 8
+
+  # applications that can send a username
+  secure:
+    type: standalone
+    version: 8
+```
+
+Both flavours may be offered side by side in the same catalog. When migrating an existing service, point the default plan at the `-classic` type and offer the ACL type as an opt-in, so no application has to change its client code before it is ready. TLS bindings carry `ca_certificate` in both flavours.
 
 ## TLS Support
 
@@ -459,6 +488,16 @@ cat /sys/kernel/mm/transparent_hugepage/enabled  # Should be [never]
 5. Create dev release: `bosh create-release --name=valkey-forge --version=X.Y.Z+dev.1 --tarball=/tmp/valkey-forge.tar.gz --force`
 6. Test thoroughly before creating final release
 7. Document changes in `ci/release_notes.md`
+
+### Keeping the -classic Plans in Step
+
+The `-classic` plan templates are copies of their base plans, because a BOSH job spec keys its `templates` map on the source path and so cannot map one file to two destinations. Only `credentials.yml` is meant to differ. Run:
+
+```
+make check-plans
+```
+
+after touching anything under `jobs/valkey-blacksmith-plans/templates/plans/`. It fails if `manifest.yml` or `init` has drifted between a base plan and its `-classic` copy. Apply any change to `manifest.yml` or `init` to both copies. Changes to `credentials.yml` in a base plan, such as a new binding field, need the same change in the `-classic` copy unless the field is an ACL trigger.
 
 ### Version File Locations
 
