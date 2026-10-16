@@ -19,6 +19,17 @@ templates:
   plans/cluster/credentials.yml:    plans/cluster/credentials.yml
   plans/cluster/init:               plans/cluster/init
 
+  # -classic types: identical deployments, but credentials without the
+  # per-binding ACL trigger fields (service_type, admin_password), so the
+  # broker passes the shared password through unchanged.
+  plans/standalone-classic/manifest.yml:    plans/standalone-classic/manifest.yml
+  plans/standalone-classic/credentials.yml: plans/standalone-classic/credentials.yml
+  plans/standalone-classic/init:            plans/standalone-classic/init
+
+  plans/cluster-classic/manifest.yml:       plans/cluster-classic/manifest.yml
+  plans/cluster-classic/credentials.yml:    plans/cluster-classic/credentials.yml
+  plans/cluster-classic/init:               plans/cluster-classic/init
+
 properties:
   environment:
     description: "The environment name of the cloudfoundry/bosh deployment"
